@@ -1,0 +1,32 @@
+name: Build iOS IPA (unsigned)
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  ios-unsigned:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - run: xcodebuild -version
+      - name: Configure iOS ARM64
+        run: |
+          cmake -S . -B build-ios -G Xcode -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_SYSROOT=iphoneos -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0 -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED=NO -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED=NO
+      - name: Build
+        run: cmake --build build-ios --config Release -- -sdk iphoneos CODE_SIGNING_ALLOWED=NO
+      - name: Package unsigned IPA
+        run: |
+          set -e
+          APP="$(find build-ios -type d -name 'OutbreakCityZero.app' -print -quit)"
+          test -n "$APP"
+          mkdir -p dist/Payload
+          ditto "$APP" dist/Payload/OutbreakCityZero.app
+          /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.red5225.outbreakcityzero" dist/Payload/OutbreakCityZero.app/Info.plist 2>/dev/null || true
+          cd dist && zip -qry OutbreakCityZero-iOS-unsigned.ipa Payload
+      - uses: actions/upload-artifact@v4
+        with:
+          name: OutbreakCityZero-iOS-unsigned-IPA
+          path: dist/OutbreakCityZero-iOS-unsigned.ipa
+          if-no-files-found: error
