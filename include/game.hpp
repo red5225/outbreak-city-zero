@@ -16,13 +16,14 @@ public:
 private:
  static constexpr int W=84,H=56,S=24;
  SDL_Window* window=nullptr; SDL_Renderer* renderer=nullptr;
+ SDL_Texture *grassTex=nullptr,*roadTex=nullptr,*buildingTex=nullptr,*zombieTex=nullptr,*civilianTex=nullptr,*barricadeTex=nullptr,*turretTex=nullptr;
  bool running=true,paused=false,dragging=false,panning=false;
  int ww=1280,wh=800,supplies=180,infected=42;
  float camX=0,camY=0,zoom=1,speed=1,sx=0,sy=0,dx=0,dy=0,px=0,py=0;
  Tool tool=Tool::Select; Zone zone=Zone::Containment;
  std::vector<Cell> cells; std::vector<Agent> agents; std::vector<Wall> walls;
  std::vector<Defense> defenses; std::string notice="Open city: place defenses wherever you want";
- void event(const SDL_Event&); void update(float); void render(); void generate();
+ void event(const SDL_Event&); void update(float); void render(); void generate(); void loadAssets(); SDL_Texture* loadTexture(const char*,bool);
  void dragAction(float,float,float,float); bool inside(int,int) const; Cell& at(int,int);
  SDL_FPoint toWorld(float,float) const; SDL_FPoint toScreen(float,float) const;
  SDL_FRect rect(float,float,float,float) const; void color(Uint8,Uint8,Uint8,Uint8=255);

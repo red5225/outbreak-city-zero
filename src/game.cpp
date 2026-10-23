@@ -9,10 +9,24 @@ bool Game::init(){
  window=SDL_CreateWindow("OUTBREAK: CITY ZERO",ww,wh,SDL_WINDOW_RESIZABLE|SDL_WINDOW_HIGH_PIXEL_DENSITY);
  if(!window) return false;
  renderer=SDL_CreateRenderer(window,nullptr); if(!renderer) return false;
- SDL_SetRenderVSync(renderer,1); cells.resize(W*H); generate();
+ SDL_SetRenderVSync(renderer,1); loadAssets(); cells.resize(W*H); generate();
  camX=W*S/2.0f-ww/2.0f; camY=H*S/2.0f-wh/2.0f; return true;
 }
-void Game::shutdown(){if(renderer)SDL_DestroyRenderer(renderer);if(window)SDL_DestroyWindow(window);SDL_Quit();}
+SDL_Texture* Game::loadTexture(const char* name,bool keyed){
+ const char* paths[] = {name, nullptr};
+ std::string local=std::string("assets/")+name;
+ SDL_Surface* surface=SDL_LoadBMP(local.c_str());
+ if(!surface){std::string bundle=std::string("../Resources/assets/")+name;surface=SDL_LoadBMP(bundle.c_str());}
+ if(!surface){std::string bundle=std::string("Resources/assets/")+name;surface=SDL_LoadBMP(bundle.c_str());}
+ if(!surface)return nullptr;
+ if(keyed) SDL_SetSurfaceColorKey(surface,true,SDL_MapRGB(SDL_GetPixelFormatDetails(surface->format),surface->format,38,65,47));
+ SDL_Texture* texture=SDL_CreateTextureFromSurface(renderer,surface);SDL_DestroySurface(surface);return texture;
+}
+void Game::loadAssets(){
+ grassTex=loadTexture("grass.bmp",false);roadTex=loadTexture("road.bmp",false);buildingTex=loadTexture("building.bmp",false);
+ zombieTex=loadTexture("zombie.bmp",true);civilianTex=loadTexture("civilian.bmp",true);barricadeTex=loadTexture("barricade.bmp",true);turretTex=loadTexture("turret.bmp",true);
+}
+void Game::shutdown(){for(auto*t:{grassTex,roadTex,buildingTex,zombieTex,civilianTex,barricadeTex,turretTex})if(t)SDL_DestroyTexture(t);if(renderer)SDL_DestroyRenderer(renderer);if(window)SDL_DestroyWindow(window);SDL_Quit();}
 bool Game::inside(int x,int y)const{return x>=0&&y>=0&&x<W&&y<H;}
 Cell& Game::at(int x,int y){return cells[y*W+x];}
 void Game::generate(){
@@ -44,7 +58,7 @@ void Game::event(const SDL_Event&e){
  case SDLK_ESCAPE:dragging=false;notice="Placement cancelled";break;case SDLK_1:tool=Tool::Select;notice="Select / inspect";break;
  case SDLK_2:tool=Tool::Wall;notice="Optional wall: drag to place";break;case SDLK_3:tool=Tool::Zone;notice="Zone paint: drag across tiles";break;
  case SDLK_4:tool=Tool::Barricade;notice="Barricade mode: tap or drag to place";break;case SDLK_5:tool=Tool::Turret;notice="Turret mode: tap or drag to place";break;
- case SDLK_z:zone=static_cast<Zone>((static_cast<int>(zone)+1)%4);notice="Zone type changed";break;case SDLK_SPACE:paused=!paused;break;
+ case SDLK_Z:zone=static_cast<Zone>((static_cast<int>(zone)+1)%4);notice="Zone type changed";break;case SDLK_SPACE:paused=!paused;break;
  case SDLK_EQUALS:case SDLK_PLUS:speed=std::min(8.0f,speed*2);break;case SDLK_MINUS:speed=std::max(.25f,speed*.5f);break;default:break;}
  if(e.type==SDL_EVENT_MOUSE_WHEEL)zoom=std::clamp(zoom*(e.wheel.y>0?1.12f:.89f),.45f,2.4f);
  if(e.type==SDL_EVENT_MOUSE_BUTTON_DOWN){float x=e.button.x,y=e.button.y;if(e.button.button==SDL_BUTTON_RIGHT||e.button.button==SDL_BUTTON_MIDDLE){panning=true;px=x;py=y;}else if(e.button.button==SDL_BUTTON_LEFT){dragging=true;sx=dx=x;sy=dy=y;}}
@@ -79,12 +93,13 @@ void Game::update(float dt){
 }
 void Game::render(){
  color(15,20,22);SDL_RenderClear(renderer);
- for(int y=0;y<H;y++)for(int x=0;x<W;x++){auto r=rect(x*S,y*S,S-1,S-1);auto&c=at(x,y);if(c.building)color(61,67,69);else if(x%9==0||y%8==0)color(49,53,55);else color(38,65,47);SDL_RenderFillRect(renderer,&r);
- if(c.building){auto roof=rect(x*S+3,y*S+3,S-7,S-7);color(74,79,81);SDL_RenderFillRect(renderer,&roof);}
+ for(int y=0;y<H;y++)for(int x=0;x<W;x++){auto r=rect(x*S,y*S,S-1,S-1);auto&c=at(x,y);SDL_Texture* tile=c.building?buildingTex:((x%9==0||y%8==0)?roadTex:grassTex);
+ if(tile) SDL_RenderTexture(renderer,tile,nullptr,&r); else {if(c.building)color(61,67,69);else if(x%9==0||y%8==0)color(49,53,55);else color(38,65,47);SDL_RenderFillRect(renderer,&r);}
+ if(c.building&&!buildingTex){auto roof=rect(x*S+3,y*S+3,S-7,S-7);color(74,79,81);SDL_RenderFillRect(renderer,&roof);}
  if(c.zone!=Zone::Normal){switch(c.zone){case Zone::Safe:color(35,165,105,95);break;case Zone::Evacuation:color(55,125,235,95);break;case Zone::Containment:color(220,70,55,95);break;default:break;}SDL_RenderFillRect(renderer,&r);}}
  for(auto&w:walls){auto a=toScreen((w.x1+.5f)*S,(w.y1+.5f)*S),b=toScreen((w.x2+.5f)*S,(w.y2+.5f)*S);color(239,190,85);SDL_RenderLine(renderer,a.x,a.y,b.x,b.y);}
- for(auto&d:defenses){auto p=toScreen((d.x+.5f)*S,(d.y+.5f)*S);float sz=std::max(5.0f,12*zoom);if(d.type==DefenseType::Barricade){color(201,148,72);SDL_FRect r{p.x-sz,p.y-sz*.7f,sz*2,sz*1.4f};SDL_RenderFillRect(renderer,&r);color(68,48,30);SDL_RenderLine(renderer,r.x,r.y,r.x+r.w,r.y+r.h);SDL_RenderLine(renderer,r.x+r.w,r.y,r.x,r.y+r.h);}else{color(78,151,210);SDL_FRect r{p.x-sz,p.y-sz,sz*2,sz*2};SDL_RenderFillRect(renderer,&r);color(210,235,245);SDL_RenderLine(renderer,p.x,p.y,p.x+sz*1.8f,p.y-sz*1.8f);}}
- for(auto&a:agents)if(a.alive){auto p=toScreen(a.x,a.y);float r=std::max(2.0f,3.5f*zoom);if(a.zombie)color(230,75,60);else color(85,205,155);SDL_FRect f{p.x-r,p.y-r,r*2,r*2};SDL_RenderFillRect(renderer,&f);}
+ for(auto&d:defenses){auto p=toScreen((d.x+.5f)*S,(d.y+.5f)*S);float sz=std::max(5.0f,12*zoom);SDL_Texture* sprite=d.type==DefenseType::Barricade?barricadeTex:turretTex;SDL_FRect sr{p.x-sz,p.y-sz,sz*2,sz*2};if(sprite)SDL_RenderTexture(renderer,sprite,nullptr,&sr);else{color(201,148,72);SDL_RenderFillRect(renderer,&sr);}}
+ for(auto&a:agents)if(a.alive){auto p=toScreen(a.x,a.y);float r=std::max(4.0f,8.0f*zoom);SDL_FRect f{p.x-r,p.y-r,r*2,r*2};SDL_Texture* sprite=a.zombie?zombieTex:civilianTex;if(sprite)SDL_RenderTexture(renderer,sprite,nullptr,&f);else{color(a.zombie?230:85,a.zombie?75:205,a.zombie?60:155);SDL_RenderFillRect(renderer,&f);}}
  color(12,17,21);SDL_FRect top{0,0,float(ww),78};SDL_RenderFillRect(renderer,&top);color(240,242,238);SDL_RenderDebugText(renderer,14,10,"OUTBREAK: CITY ZERO | OPEN CITY DEFENSE");
  std::string stats="SUPPLIES "+std::to_string(supplies)+"   ZOMBIES "+std::to_string(infected)+"   SPEED "+std::to_string(speed)+"x";SDL_RenderDebugText(renderer,14,29,stats.c_str());
  SDL_RenderDebugText(renderer,14,49,"1 SELECT  2 WALL  3 ZONES  4 BARRICADE  5 TURRET  SPACE PAUSE  +/- SPEED");

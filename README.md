@@ -2,9 +2,11 @@
 
 A 2D top-down zombie outbreak strategy prototype for Intel Macs (macOS 12+) and iPhone.
 
-## Core rule: the city starts open
+## Included original pixel-art assets
+The `assets/` directory now contains seven actual 32x32 BMP files used by the renderer: civilian, zombie, turret, barricade, road, grass, and building. They are original prototype assets, bundled/copied by CMake. Procedural shapes remain as a fallback if an asset cannot be loaded.
 
-There are no automatic perimeter walls, mandatory gates, or forced quarantine borders. Civilians and zombies can enter through any route that is not physically blocked by a building or something the player has placed. **You decide where to defend.**
+## Core rule: the city starts open
+There are no automatic perimeter walls, mandatory gates, or forced quarantine borders. Civilians and zombies can enter through any route that is not physically blocked by a building or something the player has placed. You decide where to defend.
 
 ## Gameplay in this prototype
 - Procedurally generated city blocks, roads, parks, civilians and zombies.
@@ -17,20 +19,15 @@ There are no automatic perimeter walls, mandatory gates, or forced quarantine bo
 - No automatic gates or invisible perimeter defenses.
 
 ## Controls
-- Left drag: select area / place active tool.
-- Right or middle drag: pan.
-- Mouse wheel: zoom.
-- 1 select, 2 optional wall, 3 zones, 4 barricade, 5 turret.
-- Z cycles zone type, Space pauses, + / - changes speed, Esc cancels placement.
+Left drag selects/places active tool; right or middle drag pans; mouse wheel zooms. `1` select, `2` optional wall, `3` zones, `4` barricade, `5` turret, `Z` cycles zone type, `Space` pauses, `+` / `-` changes speed, `Esc` cancels placement.
 
 ## Build on macOS
 Install Xcode Command Line Tools and CMake 3.24+. SDL3 is fetched by CMake, so first configure needs internet.
 
-    cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=x86_64 -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0
+    cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=x86_64 -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0
     cmake --build build --parallel
-    ./build/OutbreakCityZero
 
 GitHub Actions packages an Intel macOS ZIP and attempts an unsigned iOS IPA. An unsigned IPA is not ready for ordinary physical-device installation; iOS deployment generally requires signing and provisioning.
 
 ## Status
-Early playable prototype. Player-placed defenses and open-route design are implemented in the SDL3 prototype; this is not a finished or faithful clone of any existing game. Visuals are procedural and placeholder-quality.
+Early playable prototype, not a finished clone of any existing game.
