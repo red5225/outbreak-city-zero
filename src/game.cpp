@@ -19,7 +19,7 @@ SDL_Texture* Game::loadTexture(const char* name,bool keyed){
  if(!surface){std::string bundle=std::string("../Resources/assets/")+name;surface=SDL_LoadBMP(bundle.c_str());}
  if(!surface){std::string bundle=std::string("Resources/assets/")+name;surface=SDL_LoadBMP(bundle.c_str());}
  if(!surface)return nullptr;
- if(keyed) SDL_SetSurfaceColorKey(surface,true,SDL_MapRGB(SDL_GetPixelFormatDetails(surface->format),surface->format,38,65,47));
+ if(keyed) SDL_SetSurfaceColorKey(surface,true,SDL_MapRGB(SDL_GetPixelFormatDetails(surface->format),nullptr,38,65,47));
  SDL_Texture* texture=SDL_CreateTextureFromSurface(renderer,surface);SDL_DestroySurface(surface);return texture;
 }
 void Game::loadAssets(){
